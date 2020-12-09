@@ -72,7 +72,7 @@ def _upload_children_template_files(stack):
     templates=[ "network-resources",
                 "ssm-resources",
                 "rds-resources",
-                "aws-cloudformation-launch-template-webapp-resources",
+                "aws-cloudformation-autoscaling-group-webapp-resources",
                 "aws-cloudformation-elastic-load-balancer-resources",
                 "nested-aws-cloudformation-launch-template-webapp-resources" ]
 

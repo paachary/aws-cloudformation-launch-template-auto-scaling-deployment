@@ -132,7 +132,7 @@ Resources:
           - '.amazonaws.com/'
           - !ImportValue s3-templates-bucket
           - '/cloudformation-templates/'
-          - 'nested-aws-cloudformation-launch-template-webapp-resource.yaml'          
+          - 'nested-aws-cloudformation-launch-template-webapp-resources.yaml'          
 
   AppLoadBalancerStack:
     Type: AWS::CloudFormation::Stack
@@ -147,7 +147,7 @@ Resources:
           - '.amazonaws.com/'
           - !ImportValue s3-templates-bucket
           - '/cloudformation-templates/'
-          - 'aws-cloudformation-elastic-load-balancer-resource.yaml'
+          - 'aws-cloudformation-elastic-load-balancer-resources.yaml'
 
   AppAutoScalingGroupStack:
     Type: AWS::CloudFormation::Stack
@@ -166,4 +166,4 @@ Resources:
           - '.amazonaws.com/'
           - !ImportValue s3-templates-bucket
           - '/cloudformation-templates/'
-          - 'aws-cloudformation-autoscaling-group-webapp-resource.yaml'          
+          - 'aws-cloudformation-autoscaling-group-webapp-resources.yaml'          
