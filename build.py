@@ -119,7 +119,8 @@ def create_nested_stack(*stacks):
     if len(stacks) == 0:
         print("\nERROR!! Specify atleast one stack to be created. \nSyntax: create-stack[value1, value2, ...]. \n"+
         "Valid values are: \n\n" + 
-            "   webapp-nested-resources -> Creates network-resources, natgw-resources, ssm-resources, postgres-db-resources, webapp-resources. \n" + 
+            "   webapp-nested-resources -> Creates network-resources, ssm-resources, rds-resources, aws-cloudformation-launch-template-webapp-resources, \n" +
+            "   \t\t\t aws-cloudformation-elastic-load-balancer-resources and aws-cloudformation-autoscaling-group-webapp-resources stacks. \n\n" + 
                 " If you choose to create the individual resources, please choose pynt create_stack[] option.")
         return                
 
