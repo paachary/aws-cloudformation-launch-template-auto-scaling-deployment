@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+    This template is used for creating the autoscaling group for the Flask webapp.
+    Before this template is executed, we have to ensure that the following templates are executed in the order mentioned below:
+    1. network-resources
+    2. ssm-resources
+    3. rds-resources
+    4. aws-cloudformation-launch-template-webapp-resource
+    5. aws-cloudformation-elastic-load-balancer-resource
+
+Parameters:
+  DesiredCapacity:
+    Description: The desired number of instances maintained by the ASG
+    Type: String
+    Default: 0
+
+  MinInstances:
+    Description: The minimum number of instances maintained by the ASG
+    Type: String
+    Default: 0
+
+  MaxInstances:
+    Description: The maximum number of instances that can be spun up by the ASG
+    Type: String
+    Default: 0
+
+Resources:
+  WebappAsg:
+    Type: "AWS::AutoScaling::AutoScalingGroup"
+    Properties:
+      AutoScalingGroupName: Web-App-Autoscaling-Group
+      AvailabilityZones:
+        - !Select [0, !GetAZs '']
+        - !Select [1, !GetAZs '']
+        - !Select [2, !GetAZs '']
+      CapacityRebalance: true
+      Cooldown: 300
+      DesiredCapacity: !Ref DesiredCapacity
+      HealthCheckGracePeriod: 10
+      HealthCheckType: ELB
+      LaunchTemplate:
+        LaunchTemplateId: !ImportValue ec2-launch-template-webapp
+        Version: 1
+      TargetGroupARNs:
+        - !ImportValue app-target-group-name
+      MaxSize: !Ref MaxInstances
+      MinSize: !Ref MinInstances
+      VPCZoneIdentifier:
+        - !ImportValue vpc-subnet-weba
+        - !ImportValue vpc-subnet-webb
+        - !ImportValue vpc-subnet-webc  
+
+Outputs:
+  AppURL:
+    Description: Final app URL
+    Value: !ImportValue flask-webapp-url
+    Export:
+      Name: flask-webapp-dns-url

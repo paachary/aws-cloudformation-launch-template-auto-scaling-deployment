@@ -1,0 +1,46 @@
+[
+    {
+      "ParameterKey": "VpcName",
+      "ParameterValue": "vpc1"
+    },
+    {
+      "ParameterKey": "VpcCIDR",
+      "ParameterValue": "10.16.0.0/16"
+    },
+    {
+      "ParameterKey": "InstanceAmiId",
+      "ParameterValue": "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+    },
+    {
+      "ParameterKey": "InstanceType",
+      "ParameterValue": "t2.micro"
+    },
+    {
+      "ParameterKey": "RdsInstanceType",
+      "ParameterValue": "db.t2.micro"
+    },
+    {
+      "ParameterKey": "FlaskApp",
+      "ParameterValue": "microblog.py"
+    },
+    {
+      "ParameterKey": "PostgresUser",
+      "ParameterValue": "employee_usr"
+    },
+    {
+      "ParameterKey": "PostgresDb",
+      "ParameterValue": "employee_db"
+    },
+    {
+      "ParameterKey": "DesiredCapacity",
+      "ParameterValue": "2"
+    },
+    {
+      "ParameterKey": "MinInstances",
+      "ParameterValue": "2"
+    },
+    {
+      "ParameterKey": "MaxInstances",
+      "ParameterValue": "2"
+    }
+]

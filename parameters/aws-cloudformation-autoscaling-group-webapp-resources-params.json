@@ -1,0 +1,15 @@
+[
+    {
+        "ParameterKey": "DesiredCapacity",
+        "ParameterValue": "2"
+    },
+    {
+        "ParameterKey": "MinInstances",
+        "ParameterValue": "2"
+    },
+    {
+
+        "ParameterKey": "MaxInstances",
+        "ParameterValue": "2"
+    }
+]

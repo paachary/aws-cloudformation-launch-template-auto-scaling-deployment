@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: |
+  A template for creating a postgres RDS stack.
+  Before this template is executed, 
+  we have to ensure that the following templates are executed in the order mentioned below:
+  1. network-resources
+  2. ssm-resources
+
+Resources:
+
+  PostgresDBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+        GroupDescription: Security Group for Postgres RDS
+        SecurityGroupIngress:
+            - SourceSecurityGroupId: !ImportValue webapp-security-group
+              Description: 'Allowing connection to postgres port from webapp security group'
+              FromPort: 5432
+              IpProtocol: tcp
+              ToPort: 5432
+        Tags: 
+            - Key: Name
+              Value: rds-postgres-security-group
+        VpcId: !ImportValue vpc
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties: 
+      DBSubnetGroupDescription: Subnet group for the database instances
+      DBSubnetGroupName: employee-subnet-group
+      SubnetIds: 
+        - !ImportValue vpc-subnet-dbc
+        - !ImportValue vpc-subnet-dba
+        - !ImportValue vpc-subnet-dbb
+
+  PostgresRds:
+    Type: AWS::RDS::DBInstance
+    Properties: 
+      AllocatedStorage: 20
+      AvailabilityZone: !Select [0, !GetAZs '']
+      BackupRetentionPeriod: 0
+      DBInstanceClass: "{{resolve:ssm:RdsInstanceType:1}}"
+      DBName: "{{resolve:ssm:PostgresDb:1}}"
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      DeleteAutomatedBackups: true
+      DeletionProtection: false
+      Engine: postgres
+      EngineVersion: 10.13
+      MasterUsername:  "{{resolve:ssm:PostgresUser:1}}"
+      MasterUserPassword: '{{resolve:secretsmanager:PostgresRdsDbSecretPwd:SecretString:password}}'
+      MultiAZ: false
+      Port: 5432
+      PubliclyAccessible: false
+      StorageType: gp2
+      Tags: 
+        - Key: Name
+          Value: employee-postgres-rds
+      VPCSecurityGroups: 
+        - !Ref PostgresDBSecurityGroup
+
+  RdsHostNameParam:
+    Type: AWS::SSM::Parameter
+    Properties: 
+      DataType: text
+      Description: Stores the rds host name
+      Name: DbHostUrl
+      Type: String
+      Value: !Join
+            - ':'
+            - - !GetAtt
+                - PostgresRds
+                - Endpoint.Address
+              - !GetAtt
+                - PostgresRds
+                - Endpoint.Port
+
+Outputs:
+  PostgresRdsHostURL:
+    Description: The postgres Rds host url
+    Value: !Join
+          - ':'
+          - - !GetAtt
+              - PostgresRds
+              - Endpoint.Address
+            - !GetAtt
+              - PostgresRds
+              - Endpoint.Port
+    Export:
+      Name: postgres-rds-host-url

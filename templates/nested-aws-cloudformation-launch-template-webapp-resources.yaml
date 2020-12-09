@@ -1,0 +1,134 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  This template is used for creating launch template for EC2 instances
+  Before this template is executed, we have to ensure that the following templates are executed in the order mentioned below:
+    1. network-resources
+    2. ssm-resources
+    3. rds-resources
+
+Parameters:
+  InstanceAmiId:
+    Description: An ec2 instance AMI id
+    Type: String
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+
+Resources:
+  Ec2LaunchTemplate:
+    Type: "AWS::EC2::LaunchTemplate"
+    Properties:
+      LaunchTemplateName: webapp-flask-launch-template
+      LaunchTemplateData:
+          IamInstanceProfile: 
+            Name: !Ref InstanceProfile
+          ImageId: !Ref InstanceAmiId
+          InstanceType: "{{resolve:ssm:Ec2InstanceType:1}}"
+          SecurityGroupIds: 
+            - !ImportValue webapp-security-group
+          UserData: 
+            Fn::Base64: !Sub |
+              #!/bin/bash -xe
+              yum -y update
+              yum -y upgrade
+
+              ## Installing all the required software
+              yum -y install python3 git jq wget postgresql postgresql-server postgresql-devel postgresql-contrib postgresql-docs
+
+              ## configuring the environment
+              cd /home/ec2-user
+
+              rm -fr /usr/local/aws
+              rm -fr /usr/local/bin/aws
+
+              curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+              unzip awscliv2.zip
+
+              ./aws/install
+
+              ln -fs /usr/local/bin/aws /bin/aws
+
+              ln -fs /usr/bin/pip-3.7 /usr/bin/pip
+              ln -fs /usr/bin/pip-3 /usr/bin/pip
+              ln -fs /usr/bin/pip3 /usr/bin/pip
+
+              aws configure set region `curl --silent http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region`
+
+              ## Installing webapp flask app
+              cd /home/ec2-user
+              git clone https://github.com/paachary/flask-app.git
+
+              chown ec2-user:root -R flask-app/
+
+              cd /home/ec2-user/flask-app
+
+              pip install install virtualenv
+              virtualenv myenv
+              . myenv/bin/activate
+              pip install -r requirements.txt
+
+              ## Setting up webapp db connection details
+
+              . myenv/bin/activate
+              export POSTGRES_USER=$(aws ssm get-parameters --region ${AWS::Region} --names PostgresUser --query Parameters[0].Value | tr -d '"')
+              export POSTGRES_PW=$(aws secretsmanager get-secret-value --secret-id PostgresRdsDbSecretPwd | jq --raw-output '.SecretString' | jq -r .password)
+              export POSTGRES_DB=$(aws ssm get-parameters --region ${AWS::Region} --names PostgresDb --query Parameters[0].Value | tr -d '"')                    
+              export FLASK_APP=$(aws ssm get-parameters --region ${AWS::Region} --names FlaskApp --query Parameters[0].Value | tr -d '"')
+              export POSTGRES_URL=$(aws ssm get-parameters --region ${AWS::Region} --names DbHostUrl --query Parameters[0].Value | tr -d '"')
+              export POSTGRES_HOST=`echo $POSTGRES_URL | cut -f1 -d":"`
+
+              ## Setting up postgressql 
+              
+              postgresql-setup initdb
+
+              sed -i "s/peer/trust/g" /var/lib/pgsql/data/pg_hba.conf
+              sed -i "s/ident/md5/g" /var/lib/pgsql/data/pg_hba.conf
+              sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /var/lib/pgsql/data/postgresql.conf
+              sed -i "s/#port = 5432/port = 5432/g" /var/lib/pgsql/data/postgresql.conf
+              echo "host all $POSTGRES_USER 0.0.0.0/0 md5" >> /var/lib/pgsql/data/pg_hba.conf
+
+              service postgresql start
+
+              ## Initializing the flask database
+
+              export PGPASSWORD=$POSTGRES_PW
+
+              psql -U $POSTGRES_USER -d $POSTGRES_DB -h $POSTGRES_HOST -c 'DROP TABLE IF EXISTS alembic_version'
+
+              flask db stamp head
+              flask db migrate -m "installing the db code"
+              flask db upgrade
+
+              ## Launching the application and making it available on port 80.
+              gunicorn -b :80 --access-logfile - --error-logfile - microblog:app --daemon
+              exit 0
+
+  InstanceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+        - "arn:aws:iam::aws:policy/SecretsManagerReadWrite"        
+  InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: /
+      Roles:
+        - Ref: InstanceRole
+
+Outputs:
+  Ec2LaunchTemplate:
+    Description: The ec2 launch template for webapp from Flask.
+    Value: !Ref Ec2LaunchTemplate
+    Export:
+        Name: ec2-launch-template-webapp
+  

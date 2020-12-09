@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+    This template is used for creating the ELB for the Flask webapp ec2 instances. It will be assigned to 
+    the launch template.
+    Before this template is executed, we have to ensure that the following templates are executed in the order mentioned below:
+    1. network-resources
+    2. ssm-resources
+    3. rds-resources
+    4. aws-cloudformation-launch-template-webapp-resource
+
+Resources:
+  ApplicationLoadBalancer:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      IpAddressType: ipv4
+      Name: webapp-elb
+      Scheme: internet-facing
+      SecurityGroups:
+        - !ImportValue webapp-security-group
+      Subnets:
+        - !ImportValue vpc-subnet-weba
+        - !ImportValue vpc-subnet-webb
+        - !ImportValue vpc-subnet-webc
+      Type: application
+      Tags: 
+        - Key: Name
+          Value: !Join [ '', [ 'ALB-', !Ref 'AWS::StackName' ] ]      
+
+  ElbListener:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      DefaultActions:
+          - TargetGroupArn: !Ref ElbTargetGroup
+            Type: forward
+      Port: 80
+      Protocol: HTTP
+
+  ElbTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: 80
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /login
+      HealthCheckTimeoutSeconds: 5
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 5
+      VpcId: !ImportValue vpc        
+  
+Outputs:
+  ELBName:
+    Description: The elastic load balancer name
+    Value: !Ref ApplicationLoadBalancer
+    Export:
+        Name: app-load-balancer-name
+
+  AppElbDNSName:
+    Description: The DNS name for the load balancer. 
+    Value: !GetAtt
+            - ApplicationLoadBalancer
+            - DNSName
+    Export:
+      Name: app-elb-dns-name
+
+  BlogURL:
+    Description: Finalwordpress WordpressURL
+    Value: !Join [ '', [ 'http://', !GetAtt ApplicationLoadBalancer.DNSName ] ]
+    Export:
+      Name: flask-webapp-url
+
+  WebappTargetGroupName:
+    Description: The target group ARN
+    Value: !Ref ElbTargetGroup
+    Export:
+        Name: app-target-group-name
