@@ -7,6 +7,11 @@ Description:
     
 Parameters:
 
+  HostZoneName:
+    Description: Name of the existing hosted zone
+    Type: String
+    Default: "domain.local"
+
   VpcName:
       Description: Please enter the VPC name for the vpc being created
       Type: String
@@ -114,11 +119,29 @@ Resources:
           - '.amazonaws.com/'
           - !ImportValue s3-templates-bucket
           - '/cloudformation-templates/'
-          - 'rds-resources.yaml'          
+          - 'rds-resources.yaml'
+
+  Route53CreateRecordStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: RdsPostgresDBInstanceStack
+    Properties:
+
+      Parameters:
+        HostZoneName: !Ref HostZoneName
+
+      TemplateURL: 
+        !Join
+        - ''
+        - - 'https://s3.'
+          - !Ref AWS::Region
+          - '.amazonaws.com/'
+          - !ImportValue s3-templates-bucket
+          - '/cloudformation-templates/'
+          - 'route53-recordset-resources.yaml'
 
   WebappLaunchTemplateStack:
     Type: AWS::CloudFormation::Stack
-    DependsOn: RdsPostgresDBInstanceStack
+    DependsOn: Route53CreateRecordStack
     Properties:
 
       Parameters:
@@ -132,7 +155,7 @@ Resources:
           - '.amazonaws.com/'
           - !ImportValue s3-templates-bucket
           - '/cloudformation-templates/'
-          - 'nested-aws-cloudformation-launch-template-webapp-resources.yaml'          
+          - 'nested-aws-cloudformation-launch-template-webapp-resources.yaml'
 
   AppLoadBalancerStack:
     Type: AWS::CloudFormation::Stack

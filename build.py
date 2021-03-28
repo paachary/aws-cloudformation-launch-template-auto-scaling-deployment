@@ -72,6 +72,7 @@ def _upload_children_template_files(stack):
     templates=[ "network-resources",
                 "ssm-resources",
                 "rds-resources",
+                "route53-recordset-resources",
                 "aws-cloudformation-autoscaling-group-webapp-resources",
                 "aws-cloudformation-elastic-load-balancer-resources",
                 "nested-aws-cloudformation-launch-template-webapp-resources" ]
@@ -126,11 +127,12 @@ def create_nested_stack(*stacks):
 
     create_stack(*stacks)
 
+    """
     print("Emptying the temporary s3 bucket contents and deleting the S3 bucket...")
 
     _empty_s3_contents("s3-resources")
     delete_stack("s3-resources")
-
+    """
 
 @task(_check_aws_settings)
 def create_stack(*stacks, **kwargs):
@@ -145,6 +147,7 @@ def create_stack(*stacks, **kwargs):
             "   network-resources       -> Creates a custom VPC and its related resources [subnets, route tables, igw]. \n\n" +
             "   ssm-resources           -> Creates required ssm parameters for postgres-db-resources and webapp-resouces template to use. \n\n" +
             "   rds-resources           -> Creates a rds instance with a postgres db in a private subnet.\n\n" +
+            "   route53-recordset-resources -> Creates a recordset with CNAME for the RDS endpoint address.\n\n" +
             "   aws-cloudformation-launch-template-webapp-resources   -> Creates an application webapp launch template \n" +
             " \t\t\t\t\t\t\t which will be used to launch instancs via the ASG. \n\n" +
             "   aws-cloudformation-elastic-load-balancer-resources    -> Creates an application loadbalancer \n" +

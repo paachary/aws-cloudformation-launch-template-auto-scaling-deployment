@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  Template creates a route53 recordset for an existing hosted zone.
+Parameters:
+  HostZoneName:
+    Description: Name of the existing hosted zone
+    Type: String
+
+Resources:
+  R53HostedZone: 
+    Type: AWS::Route53::HostedZone
+    Properties:
+      HostedZoneConfig:
+        Comment: My private zone for RDS      
+      Name: !Ref HostZoneName
+      VPCs: 
+        - VPCId: !ImportValue vpc
+          VPCRegion: !Ref "AWS::Region"
+
+  RDSRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref R53HostedZone
+      Name: !Join
+            - '.'
+            - - 'rds'
+              - !Ref HostZoneName
+      Type: CNAME
+      TTL: 900
+      ResourceRecords:
+        - !ImportValue postgres-rds-endpoint-address
+
+  RdsHostNameParam:
+    Type: AWS::SSM::Parameter
+    Properties: 
+      DataType: text
+      Description: Stores the rds host name
+      Name: DbHostUrl
+      Type: String
+      Value: !Join
+            - ':'
+            - - !Ref RDSRecordSet
+              - !ImportValue postgres-rds-endpoint-port

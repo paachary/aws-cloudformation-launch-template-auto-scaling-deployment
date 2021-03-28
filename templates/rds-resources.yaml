@@ -38,8 +38,7 @@ Resources:
     Type: AWS::RDS::DBInstance
     Properties: 
       AllocatedStorage: 20
-      AvailabilityZone: !Select [0, !GetAZs '']
-      BackupRetentionPeriod: 0
+      BackupRetentionPeriod: 1
       DBInstanceClass: "{{resolve:ssm:RdsInstanceType:1}}"
       DBName: "{{resolve:ssm:PostgresDb:1}}"
       DBSubnetGroupName: !Ref DBSubnetGroup
@@ -49,7 +48,7 @@ Resources:
       EngineVersion: 10.13
       MasterUsername:  "{{resolve:ssm:PostgresUser:1}}"
       MasterUserPassword: '{{resolve:secretsmanager:PostgresRdsDbSecretPwd:SecretString:password}}'
-      MultiAZ: false
+      MultiAZ: true
       Port: 5432
       PubliclyAccessible: false
       StorageType: gp2
@@ -58,22 +57,6 @@ Resources:
           Value: employee-postgres-rds
       VPCSecurityGroups: 
         - !Ref PostgresDBSecurityGroup
-
-  RdsHostNameParam:
-    Type: AWS::SSM::Parameter
-    Properties: 
-      DataType: text
-      Description: Stores the rds host name
-      Name: DbHostUrl
-      Type: String
-      Value: !Join
-            - ':'
-            - - !GetAtt
-                - PostgresRds
-                - Endpoint.Address
-              - !GetAtt
-                - PostgresRds
-                - Endpoint.Port
 
 Outputs:
   PostgresRdsHostURL:
@@ -88,3 +71,19 @@ Outputs:
               - Endpoint.Port
     Export:
       Name: postgres-rds-host-url
+
+  PostgresRdsEndPointAddress:
+    Description: The postgres Rds endpoint address
+    Value: !GetAtt
+              - PostgresRds
+              - Endpoint.Address
+    Export:
+      Name: postgres-rds-endpoint-address
+
+  PostgresRdsEndPointPort:
+    Description: The postgres Rds endpoint address
+    Value: !GetAtt
+              - PostgresRds
+              - Endpoint.Port
+    Export:
+      Name: postgres-rds-endpoint-port
